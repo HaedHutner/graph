@@ -30,7 +30,11 @@ public class Graph<T> {
         }
 
         public boolean addLink(Node<T> target) {
-            boolean result = links.add(Edge.of(this, target));
+            Edge<T> edge = Edge.of(this, target);
+
+            if ( links.contains(edge) ) return false;
+
+            boolean result = links.add(edge);
 
             if (!target.containsLink(this)) {
                 result = result && target.addLink(this);
@@ -40,7 +44,11 @@ public class Graph<T> {
         }
 
         public boolean removeLink(Node<T> target) {
-            boolean result = links.remove(Edge.of(this, target));
+            Edge<T> edge = Edge.of(this, target);
+
+            if ( !links.contains(edge) ) return false;
+
+            boolean result = links.remove(edge);
 
             if (target.containsLink(this)) {
                 result = result && target.removeLink(this);
@@ -172,6 +180,17 @@ public class Graph<T> {
         return false;
     }
 
+    public boolean areLinked(T source, T target) {
+        Optional<Node<T>> sourceNode = findNode(source);
+        Optional<Node<T>> targetNode = findNode(target);
+
+        if (sourceNode.isPresent() && targetNode.isPresent()) {
+            return sourceNode.get().containsLink(targetNode.get());
+        }
+
+        return false;
+    }
+
     public Optional<Node<T>> findNode(T data) {
         return Optional.ofNullable(depthFirstSearch(new HashSet<>(), root, data));
     }
@@ -184,7 +203,7 @@ public class Graph<T> {
             Node<T> result = null;
 
             for (Edge<T> edge : start.getLinks()) {
-                if (!checkedNodes.contains(edge.getTarget())) { // if target is not in checked state
+                if (!checkedNodes.contains(edge.getTarget())) { // if target has not already been checked, check it
                     result = depthFirstSearch(checkedNodes, edge.getTarget(), criteria);
                 }
             }
