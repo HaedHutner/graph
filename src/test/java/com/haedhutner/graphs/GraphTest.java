@@ -16,8 +16,7 @@ public class GraphTest {
 
     public Graph<String> graph = new Graph<>();
 
-    @Test
-    public void insertTest() {
+    public GraphTest() {
         graph.insert(NODE_A);
         graph.insert(NODE_A, NODE_B);
         graph.insert(NODE_A, NODE_C);
@@ -25,7 +24,10 @@ public class GraphTest {
 
         graph.insert(NODE_D, NODE_E);
         graph.insert(NODE_D, NODE_F);
+    }
 
+    @Test
+    public void insertTest() {
         Assert.assertTrue("Failed to confirm link: A <--> B", graph.areLinked(NODE_A, NODE_B));
         Assert.assertTrue("Failed to confirm link: A <--> C", graph.areLinked(NODE_A, NODE_C));
         Assert.assertTrue("Failed to confirm link: A <--> D", graph.areLinked(NODE_A, NODE_D));
@@ -50,6 +52,13 @@ public class GraphTest {
         Assert.assertTrue("Failed to create link: D <--> E.", graph.link(NODE_D, NODE_E));
         Assert.assertTrue("Failed to create link: E <--> F.", graph.link(NODE_E, NODE_F));
         Assert.assertTrue("Failed to create link: C <--> F.", graph.link(NODE_C, NODE_F));
+    }
+
+    @Test
+    public void forEachTest() {
+        graph.forEach(node -> {
+            System.out.println(node.get());
+        });
     }
 
 }
