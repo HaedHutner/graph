@@ -2,8 +2,12 @@ package com.haedhutner.graphs;
 
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.experimental.theories.suppliers.TestedOn;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 
 public class GraphTest {
 
@@ -49,16 +53,66 @@ public class GraphTest {
     public void linkTest() {
         Assert.assertTrue("Failed to create link: B <--> D.", graph.link(NODE_B, NODE_D));
         Assert.assertTrue("Failed to create link: B <--> E.", graph.link(NODE_B, NODE_E));
-        Assert.assertTrue("Failed to create link: D <--> E.", graph.link(NODE_D, NODE_E));
+
+        // this link was already established in the c'tor
+        Assert.assertFalse("Failed to create link: D <--> E.", graph.link(NODE_D, NODE_E));
+
         Assert.assertTrue("Failed to create link: E <--> F.", graph.link(NODE_E, NODE_F));
         Assert.assertTrue("Failed to create link: C <--> F.", graph.link(NODE_C, NODE_F));
     }
 
     @Test
     public void forEachTest() {
+        Set<String> elements = new HashSet<>(Arrays.asList(
+                NODE_A,
+                NODE_B,
+                NODE_C,
+                NODE_D,
+                NODE_E,
+                NODE_F
+        ));
+
+        Set<String> foundElements = new HashSet<>();
+
         graph.forEach(node -> {
-            System.out.println(node.get());
+            foundElements.add(node.get());
         });
+
+        Assert.assertEquals(elements, foundElements);
     }
 
+    @Test
+    public void removeTest() {
+        Set<String> elementsWithoutD = new HashSet<>(Arrays.asList(
+                NODE_A,
+                NODE_B,
+                NODE_C
+        ));
+
+        graph.remove(NODE_D);
+
+        Set<String> foundElements = new HashSet<>();
+
+        graph.forEach(node -> {
+            foundElements.add(node.get());
+        });
+
+        Assert.assertEquals(elementsWithoutD, foundElements);
+    }
+
+    @Test
+    public void edgeHashCodeTest() {
+        Assert.assertEquals(
+                Graph.Edge.of(Graph.Node.of(NODE_A), Graph.Node.of(NODE_B)).hashCode(),
+                Graph.Edge.of(Graph.Node.of(NODE_B), Graph.Node.of(NODE_A)).hashCode()
+        );
+    }
+
+    @Test
+    public void edgeEqualsTest() {
+        Assert.assertEquals(
+                Graph.Edge.of(Graph.Node.of(NODE_A), Graph.Node.of(NODE_B)),
+                Graph.Edge.of(Graph.Node.of(NODE_B), Graph.Node.of(NODE_A))
+        );
+    }
 }

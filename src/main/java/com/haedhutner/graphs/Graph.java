@@ -31,21 +31,27 @@ public class Graph<T> {
             return links;
         }
 
-        public boolean addLink(Node<T> target) {
-            Edge<T> edge = Edge.of(this, target);
+        protected boolean addLink(Node<T> target) {
+            return addLink(new Edge<>(this, target));
+        }
 
+        protected boolean addLink(Node<T> target, float weight) {
+            return addLink(new Edge<>(this, target, weight));
+        }
+
+        private boolean addLink(Edge<T> edge) {
             if (links.contains(edge)) return false;
 
             boolean result = links.add(edge);
 
-            if (!target.containsLink(this)) {
-                result = result && target.addLink(this);
+            if (!edge.getTarget().containsLink(this)) {
+                result = result && edge.getTarget().addLink(edge.inverse());
             }
 
             return result;
         }
 
-        public boolean removeLink(Node<T> target) {
+        protected boolean removeLink(Node<T> target) {
             Edge<T> edge = Edge.of(this, target);
 
             if (!links.contains(edge)) return false;
@@ -82,13 +88,24 @@ public class Graph<T> {
         private Node<T> source;
         private Node<T> target;
 
+        private float weight;
+
         Edge(Node<T> source, Node<T> target) {
             this.source = source;
             this.target = target;
         }
 
+        Edge(Node<T> source, Node<T> target, float weight) {
+            this(source, target);
+            this.weight = weight;
+        }
+
         public static <T> Edge<T> of(Node<T> source, Node<T> target) {
             return new Edge<>(source, target);
+        }
+
+        public static <T> Edge<T> of(Node<T> source, Node<T> target, float weight) {
+            return new Edge<>(source, target, weight);
         }
 
         public Node<T> getSource() {
@@ -99,18 +116,28 @@ public class Graph<T> {
             return target;
         }
 
+        public float getWeight() {
+            return weight;
+        }
+
+        protected Edge<T> inverse() {
+            return Edge.of(target, source, weight);
+        }
+
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             Edge<?> edge = (Edge<?>) o;
-            return Objects.equals(source, edge.source) &&
-                    Objects.equals(target, edge.target);
+            return (Objects.equals(source, edge.source) &&
+                    Objects.equals(target, edge.target)) ||
+                    (Objects.equals(source, edge.target) &&
+                            Objects.equals(target, edge.source));
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(source, target);
+            return Objects.hash(source) + Objects.hash(target);
         }
     }
 
@@ -136,15 +163,7 @@ public class Graph<T> {
      * @throws IllegalArgumentException if the provided data is null.
      */
     public void insert(T data) {
-        if (data == null) {
-            throw new IllegalArgumentException();
-        }
-
-        if (root == null) {
-            root = Node.of(data);
-        } else {
-            root.addLink(Node.of(data));
-        }
+        insert(data, 0.0f);
     }
 
     /**
@@ -157,6 +176,41 @@ public class Graph<T> {
      * @throws IllegalArgumentException If the data to be inserted is null, or the parent data is not present.
      */
     public void insert(T parent, T data) {
+        insert(parent, data, 0.0f);
+    }
+
+    /**
+     * Insert a new node into the graph with a weight on the new edge that is created.
+     * If a root does is not already present, the inserted data will become it. Otherwise, the inserted data will
+     * be linked directly to the root node.
+     *
+     * @param data   the data to be inserted
+     * @param weight the weight of the edge
+     * @throws IllegalArgumentException if the provided data is null.
+     */
+    public void insert(T data, float weight) {
+        if (data == null) {
+            throw new IllegalArgumentException();
+        }
+
+        if (root == null) {
+            root = Node.of(data);
+        } else {
+            insert(root, Node.of(data), weight);
+        }
+    }
+
+    /**
+     * Insert a new node into the graph with a weight on the newly created edge.
+     * The data will be linked with the parent node provided. If the parent node does not exist, this will fail with
+     * an {@link IllegalArgumentException}.
+     *
+     * @param parent the parent data
+     * @param data   The new data to be inserted
+     * @param weight the weight of the edge
+     * @throws IllegalArgumentException If the data to be inserted is null, or the parent data is not present.
+     */
+    public void insert(T parent, T data, float weight) {
         if (data == null) {
             throw new IllegalArgumentException();
         }
@@ -166,9 +220,12 @@ public class Graph<T> {
         if (!parentNode.isPresent()) {
             throw new IllegalArgumentException();
         }
-        else {
-            parentNode.get().addLink(Node.of(data));
-        }
+
+        insert(parentNode.get(), Node.of(data), weight);
+    }
+
+    private void insert(Node<T> parent, Node<T> node, float weight) {
+        parent.addLink(node, weight);
     }
 
     /**
@@ -177,7 +234,11 @@ public class Graph<T> {
      * @param data the data to be removed
      */
     public void remove(T data) {
-        findNode(data).ifPresent(node -> node.getLinks().forEach(edge -> node.removeLink(edge.getTarget())));
+        findNode(data).ifPresent(node -> {
+            new HashSet<>(node.getLinks()).forEach(edge -> {
+                edge.getTarget().removeLink(node);
+            });
+        });
     }
 
     /**
@@ -254,17 +315,16 @@ public class Graph<T> {
      * @return the node containing the data
      */
     private Node<T> depthFirstSearch(Set<Node<T>> checkedNodes, Node<T> start, T criteria) {
-
         if (start.get().equals(criteria)) {
             return start;
-        }
-        else {
+        } else {
             checkedNodes.add(start); // set starting node to checked
             Node<T> result = null;
 
             for (Edge<T> edge : start.getLinks()) {
                 if (!checkedNodes.contains(edge.getTarget())) { // if target has not already been checked, check it
                     result = depthFirstSearch(checkedNodes, edge.getTarget(), criteria);
+                    if (result != null) break;
                 }
             }
 
@@ -284,10 +344,10 @@ public class Graph<T> {
     private void forEach(Set<Node<T>> iteratedNodes, Node<T> start, Consumer<? super Node<T>> consumer) {
         consumer.accept(start);
 
-        iteratedNodes.add(start); // set starting node to checked
+        iteratedNodes.add(start);
 
         for (Edge<T> edge : start.getLinks()) {
-            if (!iteratedNodes.contains(edge.getTarget())) { // if target has not already been checked, check it
+            if (!iteratedNodes.contains(edge.getTarget())) {
                 forEach(iteratedNodes, edge.getTarget(), consumer);
             }
         }
