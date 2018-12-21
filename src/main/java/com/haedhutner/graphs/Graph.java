@@ -1,9 +1,11 @@
 package com.haedhutner.graphs;
 
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Consumer;
 
 public class Graph<T> {
 
@@ -125,7 +127,19 @@ public class Graph<T> {
         return root;
     }
 
+    /**
+     * Insert a new node into the graph.
+     * If a root does is not already present, the inserted data will become it. Otherwise, the inserted data will
+     * be linked directly to the root node.
+     *
+     * @param data the data to be inserted
+     * @throws IllegalArgumentException if the provided data is null.
+     */
     public void insert(T data) {
+        if (data == null) {
+            throw new IllegalArgumentException();
+        }
+
         if (root == null) {
             root = Node.of(data);
         } else {
@@ -133,12 +147,35 @@ public class Graph<T> {
         }
     }
 
+    /**
+     * Insert a new node into the graph.
+     * The data will be linked with the parent node provided. If the parent node does not exist, this will fail with
+     * an {@link IllegalArgumentException}.
+     *
+     * @param parent the parent data
+     * @param data   The new data to be inserted
+     * @throws IllegalArgumentException If the data to be inserted is null, or the parent data is not present.
+     */
     public void insert(T parent, T data) {
-        findNode(parent).ifPresent(parentNode -> {
-            parentNode.addLink(Node.of(data));
-        });
+        if (data == null) {
+            throw new IllegalArgumentException();
+        }
+
+        Optional<Node<T>> parentNode = findNode(parent);
+
+        if (!parentNode.isPresent()) {
+            throw new IllegalArgumentException();
+        }
+        else {
+            parentNode.get().addLink(Node.of(data));
+        }
     }
 
+    /**
+     * Remove a node form the graph with the provided data
+     *
+     * @param data the data to be removed
+     */
     public void remove(T data) {
         findNode(data).ifPresent(node -> node.getLinks().forEach(edge -> node.removeLink(edge.getTarget())));
     }
@@ -218,7 +255,9 @@ public class Graph<T> {
      */
     private Node<T> depthFirstSearch(Set<Node<T>> checkedNodes, Node<T> start, T criteria) {
 
-        if (start.get().equals(criteria)) return start;
+        if (start.get().equals(criteria)) {
+            return start;
+        }
         else {
             checkedNodes.add(start); // set starting node to checked
             Node<T> result = null;
@@ -230,6 +269,27 @@ public class Graph<T> {
             }
 
             return result;
+        }
+    }
+
+    /**
+     * Iterate over all the nodes in this graph, without repeating
+     *
+     * @param consumer What to do with each node
+     */
+    public void forEach(Consumer<? super Node<T>> consumer) {
+        forEach(new HashSet<>(), root, consumer);
+    }
+
+    private void forEach(Set<Node<T>> iteratedNodes, Node<T> start, Consumer<? super Node<T>> consumer) {
+        consumer.accept(start);
+
+        iteratedNodes.add(start); // set starting node to checked
+
+        for (Edge<T> edge : start.getLinks()) {
+            if (!iteratedNodes.contains(edge.getTarget())) { // if target has not already been checked, check it
+                forEach(iteratedNodes, edge.getTarget(), consumer);
+            }
         }
     }
 
