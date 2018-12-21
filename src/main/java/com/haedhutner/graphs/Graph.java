@@ -32,7 +32,7 @@ public class Graph<T> {
         public boolean addLink(Node<T> target) {
             Edge<T> edge = Edge.of(this, target);
 
-            if ( links.contains(edge) ) return false;
+            if (links.contains(edge)) return false;
 
             boolean result = links.add(edge);
 
@@ -46,7 +46,7 @@ public class Graph<T> {
         public boolean removeLink(Node<T> target) {
             Edge<T> edge = Edge.of(this, target);
 
-            if ( !links.contains(edge) ) return false;
+            if (!links.contains(edge)) return false;
 
             boolean result = links.remove(edge);
 
@@ -180,6 +180,13 @@ public class Graph<T> {
         return false;
     }
 
+    /**
+     * Check if there is an existing edge between nodes containing the specified data
+     *
+     * @param source the source node
+     * @param target the target node
+     * @return Whether they are linked or not
+     */
     public boolean areLinked(T source, T target) {
         Optional<Node<T>> sourceNode = findNode(source);
         Optional<Node<T>> targetNode = findNode(target);
@@ -191,10 +198,24 @@ public class Graph<T> {
         return false;
     }
 
+    /**
+     * Find the node containing the specified data
+     *
+     * @param data the data to look for
+     * @return An optional containing the node if found, an empty optional if not
+     */
     public Optional<Node<T>> findNode(T data) {
         return Optional.ofNullable(depthFirstSearch(new HashSet<>(), root, data));
     }
 
+    /**
+     * Recursively look through the nodes, starting with the one provided, for a node meeting the specified criteria
+     *
+     * @param checkedNodes A hashset containing already-checked nodes
+     * @param start        Where to start the search
+     * @param criteria     What to look for
+     * @return the node containing the data
+     */
     private Node<T> depthFirstSearch(Set<Node<T>> checkedNodes, Node<T> start, T criteria) {
 
         if (start.get().equals(criteria)) return start;
